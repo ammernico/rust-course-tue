@@ -19,13 +19,13 @@ fn take_user_input(value: &str) -> f32 {
 
         let mut input_line = String::new();
         stdin()
-        .read_line(&mut input_line)
-        .expect("Failed to read line");
+            .read_line(&mut input_line)
+            .expect("Failed to read line");
 
         let input = input_line
-            .trim()  // removes whitespaces
+            .trim() // removes whitespaces
             .parse();
-        
+
         match input {
             Ok(input) => {
                 r = input;
@@ -43,10 +43,7 @@ fn main() {
     let weight = take_user_input("weight in kilograms");
     let height = take_user_input("height in meters");
 
-    let bmi_values = BmiValues{
-        weight,
-        height,
-    };
+    let bmi_values = BmiValues { weight, height };
 
     let bmi = calc_bmi(bmi_values);
     println!("BMI is {}", bmi);
