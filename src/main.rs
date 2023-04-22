@@ -1,14 +1,13 @@
 use std::io::stdin;
 use std::io::Write;
 
-struct BmiValues {
-    weight: f32,
-    height: f32,
-}
+struct Weight(f32);
+struct Height(f32);
+struct Bmi(f32);
 
-fn calc_bmi(b: BmiValues) -> f32 {
+fn calc_bmi(w: Weight, h: Height) -> Bmi {
     // weight (kg) / height**2 (m)
-    b.weight / (b.height * b.height)
+    Bmi(w.0 / (h.0 * h.0))
 }
 
 fn take_user_input(value: &str) -> f32 {
@@ -41,10 +40,10 @@ fn take_user_input(value: &str) -> f32 {
 
 fn main() {
     let weight = take_user_input("weight in kilograms");
+    let weight = Weight(weight);
     let height = take_user_input("height in meters");
+    let height = Height(height);
 
-    let bmi_values = BmiValues { weight, height };
-
-    let bmi = calc_bmi(bmi_values);
-    println!("BMI is {}", bmi);
+    let bmi = calc_bmi(weight, height);
+    println!("BMI is {}", bmi.0);
 }
