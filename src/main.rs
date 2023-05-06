@@ -3,14 +3,20 @@ use std::io::Write;
 
 struct Weight(f32);
 struct Height(f32);
+#[derive(Debug)]
 struct Bmi(f32);
 
-fn calc_bmi(w: Weight, h: Height) -> Option<Bmi> {
+#[derive(Debug, PartialEq)]
+enum BmiError {
+    HeightCannotBeZero,
+}
+
+fn calc_bmi(w: Weight, h: Height) -> Result<Bmi, BmiError> {
     if h.0 <= 0.0 {
-        return None;
+        return Err(BmiError::HeightCannotBeZero);
     }
     // weight (kg) / height**2 (m)
-    Some(Bmi(w.0 / (h.0 * h.0)))
+    Ok(Bmi(w.0 / (h.0 * h.0)))
 }
 
 #[test]
@@ -22,7 +28,9 @@ fn test_calculate_bmi() {
 #[test]
 fn test_calculate_bmi_failing() {
     let r = calc_bmi(Weight(69.0), Height(-0.0));
-    assert!(r.is_none());
+    assert!(r.is_err());
+    let e = r.unwrap_err();
+    assert_eq!(e, BmiError::HeightCannotBeZero);
 }
 
 fn take_user_input(value: &str) -> f32 {
@@ -59,6 +67,9 @@ fn main() {
     let height = take_user_input("height in meters");
     let height = Height(height);
 
-    let bmi = calc_bmi(weight, height).unwrap();
-    println!("BMI is {}", bmi.0);
+    let bmi = calc_bmi(weight, height);
+    match bmi {
+        Ok(bmi) => println!("Bmi is {}", bmi.0),
+        _ => println!("Error while calculating"),
+    }
 }
