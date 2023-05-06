@@ -20,10 +20,11 @@ pub fn calc_bmi(w: Weight, h: Height) -> Result<Bmi, BmiError> {
     Ok(Bmi(w.0 / (h.0 * h.0)))
 }
 
-fn take_user_input(value: &str) -> f32 {
+#[allow(dead_code)]
+fn take_user_input(prompt: &str) -> f32 {
     let r: f32;
     loop {
-        print!("Please enter the {}: ", value);
+        print!("Please enter the {}: ", prompt);
         let _ = std::io::stdout().flush();
 
         let mut input_line = String::new();
@@ -48,10 +49,31 @@ fn take_user_input(value: &str) -> f32 {
     r
 }
 
+fn take_user_input1(prompt: &str) -> f32 {
+    let r: f32;
+    loop {
+        let amount = inquire::CustomType::<f32>::new(prompt)
+            .with_formatter(&|i| format!("{:.2}", i))
+            .with_error_message("Please type a valid number")
+            .prompt();
+
+        match amount {
+            Ok(amount) => {
+                r = amount;
+                break;
+            }
+            _ => {
+                println!("bad input")
+            }
+        }
+    }
+    r
+}
+
 fn main() {
-    let weight = take_user_input("weight in kilograms");
+    let weight = take_user_input1("Weight in kilograms: ");
     let weight = Weight(weight);
-    let height = take_user_input("height in meters");
+    let height = take_user_input1("Height in meters: ");
     let height = Height(height);
 
     let bmi = calc_bmi(weight, height);
