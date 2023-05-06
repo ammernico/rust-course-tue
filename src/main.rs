@@ -78,7 +78,16 @@ fn main() {
 
     let bmi = calc_bmi(weight, height);
     match bmi {
-        Ok(bmi) => println!("Bmi is {}", bmi.0),
+        Ok(bmi) => {
+            println!("Bmi is {}", bmi.0);
+
+            let mut file = std::fs::File::options()
+                .create(true)
+                .append(true)
+                .open("foo.txt")
+                .unwrap();
+            writeln!(&mut file, "{}", bmi.0).unwrap();
+        }
         _ => println!("Error while calculating"),
     }
 }
