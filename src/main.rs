@@ -1,93 +1,67 @@
-use std::io::stdin;
-use std::io::Write;
+#[allow(unused_imports)]
+use axum::{
+    routing::{get, post},
+    http::StatusCode,
+    response::IntoResponse,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 
-mod tests;
 
-pub struct Weight(f32);
-pub struct Height(f32);
-#[derive(Debug)]
-pub struct Bmi(f32);
-#[derive(Debug, PartialEq)]
-pub enum BmiError {
-    HeightCannotBeZero,
+#[tokio::main]
+async fn main() {
+    // initialize tracing
+    tracing_subscriber::fmt::init();
+
+    // build our application with a route
+    let app = Router::new()
+        // `GET /` goes to `root`
+        .route("/", get(root))
+        // `POST /users` goes to `create_user`
+        .route("/users", post(create_user));
+
+    // run our app with hyper
+    // `axum::Server` is a re-export of `hyper::Server`
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::debug!("listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
 
-pub fn calc_bmi(w: Weight, h: Height) -> Result<Bmi, BmiError> {
-    if h.0 <= 0.0 {
-        return Err(BmiError::HeightCannotBeZero);
-    }
-    // weight (kg) / height**2 (m)
-    Ok(Bmi(w.0 / (h.0 * h.0)))
+// basic handler that responds with a static string
+async fn root() -> &'static str {
+    "Hello, World!"
 }
 
-#[allow(dead_code)]
-fn take_user_input(prompt: &str) -> f32 {
-    let r: f32;
-    loop {
-        print!("Please enter the {}: ", prompt);
-        let _ = std::io::stdout().flush();
+async fn create_user(
+    // this argument tells axum to parse the request body
+    // as JSON into a `CreateUser` type
+    Json(payload): Json<CreateUser>,
+) -> (StatusCode, Json<User>) {
+    // insert your application logic here
+    let user = User {
+        id: 1337,
+        username: payload.username,
+    };
 
-        let mut input_line = String::new();
-        stdin()
-            .read_line(&mut input_line)
-            .expect("Failed to read line");
-
-        let input = input_line
-            .trim() // removes whitespaces
-            .parse();
-
-        match input {
-            Ok(input) => {
-                r = input;
-                break;
-            }
-            _ => {
-                println!("bad input")
-            }
-        }
-    }
-    r
+    // this will be converted into a JSON response
+    // with a status code of `201 Created`
+    (StatusCode::CREATED, Json(user))
 }
 
-fn take_user_input1(prompt: &str) -> f32 {
-    let r: f32;
-    loop {
-        let amount = inquire::CustomType::<f32>::new(prompt)
-            .with_formatter(&|i| format!("{:.2}", i))
-            .with_error_message("Please type a valid number")
-            .prompt();
-
-        match amount {
-            Ok(amount) => {
-                r = amount;
-                break;
-            }
-            _ => {
-                println!("bad input")
-            }
-        }
-    }
-    r
+// the input to our `create_user` handler
+#[derive(Deserialize)]
+struct CreateUser {
+    username: String,
 }
 
-fn main() {
-    let weight = take_user_input1("Weight in kilograms: ");
-    let weight = Weight(weight);
-    let height = take_user_input1("Height in meters: ");
-    let height = Height(height);
-
-    let bmi = calc_bmi(weight, height);
-    match bmi {
-        Ok(bmi) => {
-            println!("Bmi is {}", bmi.0);
-
-            let mut file = std::fs::File::options()
-                .create(true)
-                .append(true)
-                .open("foo.txt")
-                .unwrap();
-            writeln!(&mut file, "{}", bmi.0).unwrap();
-        }
-        _ => println!("Error while calculating"),
-    }
+// the output to our `create_user` handler
+#[derive(Serialize)]
+struct User {
+    id: u64,
+    username: String,
 }
+
