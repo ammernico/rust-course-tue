@@ -1,67 +1,73 @@
+use askama::Template;
 #[allow(unused_imports)]
 use axum::{
-    routing::{get, post},
+    extract::Form,
     http::StatusCode,
     response::IntoResponse,
+    response::{Html, Response},
+    routing::{get, post},
     Json, Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::net::SocketAddr;
 
+#[derive(Template, Default)]
+#[template(path = "form.html")]
+struct UserInput<'a> {
+    height: &'a str,
+    weight: &'a str,
+}
+
+#[derive(Deserialize)]
+struct UserInputFields {
+    height: f32,
+    weight: f32,
+}
+
+#[derive(Template)]
+#[template(path = "success.html")]
+struct SuccessTemplate<'a> {
+    bmi: &'a str,
+}
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
     tracing_subscriber::fmt::init();
 
-    // build our application with a route
-    let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user));
+    let router = Router::new()
+        .route("/", get(parse_user_form))
+        .route("/submit", post(submit));
 
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::debug!("listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+        .serve(router.into_make_service())
         .await
         .unwrap();
 }
 
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
+fn render_template(template: impl Template) -> Response {
+    match template.render() {
+        Ok(rendered) => Html(rendered).into_response(),
+        Err(e) => {
+            eprintln!("Failed to render template: {e:?}");
+
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
-    };
-
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
+async fn parse_user_form() -> Response {
+    let bmi_template = UserInput::default();
+    render_template(bmi_template)
 }
 
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
+async fn submit(Form(fields): Form<UserInputFields>) -> Response {
+    println!("Height: {} Weight: {}\n", &fields.height, &fields.weight);
 
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
-}
+    let bmi = fields.weight / (fields.height * fields.height);
+    let result = format!("{}", bmi);
 
+    let template = SuccessTemplate { bmi: &result };
+    render_template(template)
+}
